@@ -12,11 +12,10 @@
 ///////////////////////////
 #include "footswitch/footswitch.h"
 
-
-hid_device            *dev = NULL;
-struct pedal_protocol pd          = { { 0 } };
-struct pedal_data     *curr_pedal = &pd.pedals[1]; // start at the second pedal
-static unsigned short FOOTSWITCH_USB_HIDS[][2] = {
+static hid_device            *dev                     = NULL;
+static struct pedal_protocol pd                       = { { 0 } };
+static struct pedal_data     *curr_pedal              = &pd.pedals[1]; // start at the second pedal
+static unsigned short        FOOTSWITCH_USB_HIDS[][2] = {
   { 0x1a86, 0xe026 },
   { 0x0c45, 0x7403 },
   { 0x0c45, 0x7404 },
@@ -48,6 +47,41 @@ void usage() {
   exit(1);
 }
 
+int footswitch_usb_devices_qty(void){
+  int                    qty = 0;
+  struct hid_device_info *devs, *cur_dev;
+
+  devs    = hid_enumerate(0x0, 0x0);
+  cur_dev = devs;
+  while (cur_dev) {
+    qty++;
+    cur_dev = cur_dev->next;
+  }
+  hid_free_enumeration(devs);
+  return(qty);
+}
+
+void footswitch_enumerate_devs(){
+  struct hid_device_info *devs, *cur_dev;
+
+  devs    = hid_enumerate(0x0, 0x0);
+  cur_dev = devs;
+  int i   = 0;
+  int qty = footswitch_usb_devices_qty();
+
+  while (cur_dev) {
+    printf("Device #%d/%d:\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls",
+           ++i, qty,
+           cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
+    printf("\n");
+    printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
+    printf("  Product:      %ls\n", cur_dev->product_string);
+    printf("\n");
+    cur_dev = cur_dev->next;
+  }
+  hid_free_enumeration(devs);
+}
+
 void init_pid(unsigned short vid, unsigned short pid) {
 #ifdef OSX
   hid_init();
@@ -60,7 +94,7 @@ void init_pid(unsigned short vid, unsigned short pid) {
   int i = 0;
   while (ptr != NULL) {
     if (ptr->interface_number == 1) {
-      fprintf(stderr,"interface #%d\n", i);
+      fprintf(stderr, "interface #%d\n", i);
       dev = hid_open_path(ptr->path);
       break;
     }
@@ -69,6 +103,9 @@ void init_pid(unsigned short vid, unsigned short pid) {
   }
   hid_free_enumeration(info);
 #endif
+  if (dev) {
+    printf("hid opened\n");
+  }
 }
 
 void init() {
@@ -119,7 +156,8 @@ void init_pedals() {
 }
 
 void deinit() {
-  hid_close(dev);
+//  if(dev)
+//    hid_close(dev);
   hid_exit();
 }
 
@@ -129,7 +167,7 @@ void usb_write(unsigned char data[8]) {
   if (r < 0) {
     fatal("error writing data (%ls)", hid_error(dev));
   }
-  usleep(30 * 1000);
+  //usleep(30 * 1000);
 }
 
 void print_mouse(unsigned char data[]) {
@@ -470,7 +508,6 @@ void write_pedals() {
     debug_arr(pd.pedals[i].data, pd.pedals[i].data_len);
   }
   usb_write(pd.start);
-  usleep(1000 * 1000);
   write_pedal(&pd.pedals[0]);
   write_pedal(&pd.pedals[1]);
   write_pedal(&pd.pedals[2]);
@@ -485,11 +522,12 @@ int footswitch_main(const int argc, const char **argv) {
   if (argc == 2 && strcmp(argv[1], "-r") == 0) {
     init();
     read_pedals();
+    printf("deinit..\n");
     deinit();
     return(0);
   }
   init_pedals();
-  while ((opt = getopt(argc, argv, "123rs:S:a:k:m:b:x:y:w:")) != -1) {
+  while ((opt = getopt(argc, (char **)argv, "123rs:S:a:k:m:b:x:y:w:")) != -1) {
     switch (opt) {
     case '1':
       curr_pedal = &pd.pedals[0];

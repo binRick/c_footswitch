@@ -1,5 +1,6 @@
 footswitch_srcs = [
   'footswitch.c',
+  'module.c',
   'common.c',
   'debug.c',
 ]
