@@ -91,20 +91,19 @@ void init_pid(unsigned short vid, unsigned short pid) {
   hid_init();
   info = hid_enumerate(vid, pid);
   ptr  = info;
-  int i = 0;
   while (ptr != NULL) {
     if (ptr->interface_number == 1) {
-      fprintf(stderr, "interface #%d\n", i);
       dev = hid_open_path(ptr->path);
       break;
     }
     ptr = ptr->next;
-    i++;
   }
   hid_free_enumeration(info);
 #endif
   if (dev) {
-    printf("hid opened\n");
+    fprintf(stderr, "hid opened\n");
+  }else{
+    fprintf(stderr, "hid open failed\n");
   }
 }
 
@@ -522,7 +521,6 @@ int footswitch_main(const int argc, const char **argv) {
   if (argc == 2 && strcmp(argv[1], "-r") == 0) {
     init();
     read_pedals();
-    printf("deinit..\n");
     deinit();
     return(0);
   }

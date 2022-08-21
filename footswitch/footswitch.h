@@ -18,9 +18,6 @@ struct pedal_protocol {
   struct pedal_data pedals[3];
 } pedal_protocol;
 
-int footswitch_usb_devices_qty(void);
-void footswitch_enumerate_devs();
-int footswitch_main(const int argc, const char **argv);
 void write_pedals();
 void write_pedal(struct pedal_data *pedal);
 void compile_mouse_xyw(const char *mx, const char *my, const char *mw);

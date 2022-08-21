@@ -1,5 +1,5 @@
 #pragma once
-#include "footswitch/footswitch.h"
+#include "footswitch/def.h"
 #include "module/def.h"
 #include "module/module.h"
 #include "module/require.h"
@@ -13,12 +13,11 @@ module(footswitch_module) {
 int  footswitch_module_init(module(footswitch_module) * exports);
 void footswitch_module_deinit(module(footswitch_module) * exports);
 
+#include "footswitch/exports.h"
+
 exports(footswitch_module) {
   .init                = footswitch_module_init,
   .deinit              = footswitch_module_deinit,
-  .list_usb_devices    = NULL,
-  .get_usb_devices_qty = NULL,
+  .list_usb_devices    = footswitch_enumerate_devs,
+  .get_usb_devices_qty = footswitch_usb_devices_qty,
 };
-
-#define fs    require(footswitch_module)
-#define free_fs()    clib_module_free(fs)

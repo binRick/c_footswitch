@@ -1,5 +1,6 @@
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#pragma once
+#ifndef __FS_COMMON_H__
+#define __FS_COMMON_H__
 
 enum modifier {
   CTRL    = 1,
@@ -23,11 +24,8 @@ typedef unsigned char Bool;
 
 Bool parse_modifier(const char *arg, enum modifier *mod);
 Bool parse_mouse_button(const char *arg, enum mouse_button *btn);
-
 Bool encode_string(const char *str, unsigned char *arr);
-
 Bool encode_key(const char *key, unsigned char *b);
-
 const char * decode_byte(unsigned char b);
 
 #endif
