@@ -1,8 +1,27 @@
+#pragma once
+///////////////////////////
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+///////////////////////////
+#include "common.h"
+#include "debug.h"
+#include "hidapi/hidapi.h"
+///////////////////////////
 #include "footswitch/footswitch.h"
 
-hid_device     *dev        = NULL;
-pedal_protocol pd          = { { 0 } };
-pedal_data     *curr_pedal = &pd.pedals[1]; // start at the second pedal
+
+hid_device            *dev = NULL;
+struct pedal_protocol pd          = { { 0 } };
+struct pedal_data     *curr_pedal = &pd.pedals[1]; // start at the second pedal
+static unsigned short FOOTSWITCH_USB_HIDS[][2] = {
+  { 0x1a86, 0xe026 },
+  { 0x0c45, 0x7403 },
+  { 0x0c45, 0x7404 },
+  { 0x413d, 0x2107 },
+};
 
 // KEY and MOUSE types can be combined
 #define KEY_TYPE       1
@@ -38,38 +57,46 @@ void init_pid(unsigned short vid, unsigned short pid) {
   hid_init();
   info = hid_enumerate(vid, pid);
   ptr  = info;
+  int i = 0;
   while (ptr != NULL) {
     if (ptr->interface_number == 1) {
+      fprintf(stderr,"interface #%d\n", i);
       dev = hid_open_path(ptr->path);
       break;
     }
     ptr = ptr->next;
+    i++;
   }
   hid_free_enumeration(info);
 #endif
 }
 
 void init() {
-  unsigned short vid_pid[][2] = {
-    { 0x0c45, 0x7403 },
-    { 0x0c45, 0x7404 },
-    { 0x413d, 0x2107 },
-    { 0x1a86, 0xe026 },
-  };
-  int            i = 0;
+  int max_retries    = 10;
+  int retry_delay_ms = 12;
+  int retries        = 0;
 
-  for (i = 0; i < sizeof(vid_pid) / sizeof(vid_pid[0]); i++) {
-    init_pid(vid_pid[i][0], vid_pid[i][1]);
-    if (dev != NULL) {
-      break;
+  while (retries < max_retries && dev == NULL) {
+    if (retries > 0) {
+      printf("retry #%d\n", retries);
     }
+    for (int i = 0; i < sizeof(FOOTSWITCH_USB_HIDS) / sizeof(FOOTSWITCH_USB_HIDS[0]); i++) {
+      init_pid(FOOTSWITCH_USB_HIDS[i][0], FOOTSWITCH_USB_HIDS[i][1]);
+      if (dev != NULL) {
+        fprintf(stderr, "Loaded Footswitch Device #%d\n", i);
+        break;
+      }
+    }
+    retries++;
+    usleep(1000 * retry_delay_ms);
   }
+
   if (dev == NULL) {
     fatal("Cannot find footswitch with one of the supported VID:PID.\nCheck that the device is connected and that you have the correct permissions to access it.");
   }
 }
 
-void init_pedal(pedal_data *p, int num) {
+void init_pedal(struct pedal_data *p, int num) {
   unsigned char default_header[8] = { 0x01, 0x81, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00 };
   unsigned char default_data[8]   = { 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
@@ -414,7 +441,7 @@ void compile_mouse_xyw(const char *mx, const char *my, const char *mw) {
   }
 }
 
-void write_pedal(pedal_data *pedal) {
+void write_pedal(struct pedal_data *pedal) {
   unsigned char data[8];
   int           arr_ind = 0, data_ind = 0;
 
@@ -432,17 +459,16 @@ void write_pedal(pedal_data *pedal) {
 }
 
 void write_pedals() {
-  /*
-   * int i = 0;
-   * printf("start: ");
-   * debug_arr(pd.start, 8);
-   * for (i = 0 ; i < 3 ; i++) {
-   *  printf("pedal %d header: ", i+1);
-   *  debug_arr(pd.pedals[i].header, 8);
-   *  printf("pedal %d data: ", i+1);
-   *  debug_arr(pd.pedals[i].data, pd.pedals[i].data_len);
-   * }
-   */
+  int i = 0;
+
+  printf("start: ");
+  debug_arr(pd.start, 8);
+  for (i = 0; i < 3; i++) {
+    printf("pedal %d header: ", i + 1);
+    debug_arr(pd.pedals[i].header, 8);
+    printf("pedal %d data: ", i + 1);
+    debug_arr(pd.pedals[i].data, pd.pedals[i].data_len);
+  }
   usb_write(pd.start);
   usleep(1000 * 1000);
   write_pedal(&pd.pedals[0]);
@@ -450,7 +476,7 @@ void write_pedals() {
   write_pedal(&pd.pedals[2]);
 }
 
-int main(int argc, char *argv[]) {
+int footswitch_main(const int argc, const char **argv) {
   int opt;
 
   if (argc == 1) {

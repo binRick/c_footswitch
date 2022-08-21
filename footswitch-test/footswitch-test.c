@@ -1,10 +1,10 @@
 ////////////////////////////////////////////
-
 #ifdef DEBUG_MEMORY
 #include "debug-memory/debug_memory.h"
 #endif
 ////////////////////////////////////////////
 #include "footswitch-test/footswitch-test.h"
+#include "footswitch/footswitch.h"
 ////////////////////////////////////////////
 #include "ansi-codes/ansi-codes.h"
 #include "c_fsio/include/fsio.h"
@@ -21,6 +21,15 @@ void __attribute__((constructor)) __constructor__footswitch_test();
 void __attribute__((destructor)) __destructor__footswitch_test();
 void __footswitch_test__setup_executable_path(const char **argv);
 
+TEST t_footswitch_test_main(void){
+  const char *argv[] = {
+    "footswitch", "-r"
+  };
+  const int argc = 2;
+  int res = footswitch_main(argc,(const char **)argv);
+  ASSERT_EQ(res,0);
+  PASS();
+}
 TEST t_footswitch_test(void *PARAMETER){
   char *msg         = NULL;
   int  tested_value = -1;
@@ -35,6 +44,9 @@ TEST t_footswitch_test(void *PARAMETER){
   PASSm(msg);
 }
 
+SUITE(s_footswitch_test_main) {
+  RUN_TEST(t_footswitch_test_main);
+}
 SUITE(s_footswitch_test) {
   void *TEST_PARAM = 0;
 
@@ -43,12 +55,13 @@ SUITE(s_footswitch_test) {
 
 GREATEST_MAIN_DEFS();
 
-int main(const int argc, const char **argv) {
-  __footswitch_test__setup_executable_path(argv);
+int main(const int argc, char **argv) {
+  __footswitch_test__setup_executable_path((const char **)argv);
   GREATEST_MAIN_BEGIN();
   if (isatty(STDOUT_FILENO)) {
   }
   RUN_SUITE(s_footswitch_test);
+  RUN_SUITE(s_footswitch_test_main);
   GREATEST_MAIN_END();
 }
 

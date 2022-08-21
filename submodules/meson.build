@@ -1,3 +1,4 @@
+subdir('c_deps/meson/osx')
 subdir('c_deps/meson/deps/cargs')
 subdir('c_deps/meson/deps/module')
 subdir('c_deps/meson/deps/strdup')
