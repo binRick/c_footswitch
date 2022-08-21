@@ -1,4 +1,6 @@
 *.swp
-# binaries
-scythe
-footswitch
+.cache
+.attic
+submodules/c_deps
+build
+build-muon
