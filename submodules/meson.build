@@ -1,6 +1,7 @@
 subdir('c_deps/meson/osx')
 subdir('c_deps/meson/deps/cargs')
 subdir('c_deps/meson/deps/module')
+subdir('c_deps/meson/deps/str-flatten.c')
 subdir('c_deps/meson/deps/strdup')
 subdir('c_deps/meson/deps/vt100utils')
 subdir('c_deps/meson/deps/uuid4')

@@ -10,8 +10,106 @@
 #include "c_fsio/include/fsio.h"
 #include "c_greatest/greatest/greatest.h"
 #include "c_stringfn/include/stringfn.h"
+#include "c_string_buffer/include/stringbuffer.h"
 #include "c_vector/include/vector.h"
+#include "str-flatten.c/src/str-flatten.h"
 
+enum footswitch_preset_type_t {
+  PRESET_ONE,
+  PRESETS_QTY,
+};
+enum button_type_t {
+  BUTTON_TYPE_LEFT,
+  BUTTON_TYPE_CENTER,
+  BUTTON_TYPE_RIGHT,
+  BUTTON_TYPES_QTY,
+};
+
+struct footswitch_preset_keys_t {
+  char *key;
+  char *modifiers[8];
+};
+struct footswitch_preset_t {
+  struct footswitch_preset_keys_t buttons[BUTTON_TYPES_QTY+1];
+};
+
+struct footswitch_preset_t footswitch_presets[] = {
+  [PRESET_ONE] = {
+    .buttons = {
+      [BUTTON_TYPE_LEFT] = {
+        .modifiers = {
+          "l_shift",
+          "r_shift",
+          "r_alt",
+          NULL,
+        },
+        .key = "a",
+      },
+      [BUTTON_TYPE_CENTER] = {
+        .modifiers = {
+          "l_shift",
+          "r_shift",
+          "r_alt",
+          NULL,
+        },
+        .key = "b",
+      },
+      [BUTTON_TYPE_RIGHT] = {
+        .modifiers = {
+          "l_shift",
+          "r_shift",
+          "r_alt",
+          NULL,
+        },
+        .key = "c",
+      },
+      [BUTTON_TYPES_QTY] = { 0 },
+    },
+  },
+  [PRESETS_QTY] = { 0 },
+};
+
+struct parsed_footswitch_preset_t {
+  char **argv;
+  char *argv_s;
+  int argc;
+  enum footswitch_preset_type_t type;
+};
+
+struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_preset_type_t preset_type){
+  struct parsed_footswitch_preset_t *parsed_preset = calloc(1,sizeof(struct parsed_footswitch_preset_t));
+  parsed_preset->type = preset_type;
+  struct footswitch_preset_t *preset;
+  struct Vector *keys_v = vector_new();
+  char *b;
+  preset = &(footswitch_presets[preset_type]);
+  if(preset != NULL){
+    for(size_t i=0; i< BUTTON_TYPES_QTY;i++){
+      asprintf(&b,"-%lu",i+1);
+      vector_push(keys_v,(void*)strdup(b));
+      if(*(preset->buttons[i]).modifiers){
+        vector_push(keys_v,"-m");
+        vector_push(keys_v,*(preset->buttons[i].modifiers));
+        if(*(preset->buttons[i].key)){
+          vector_push(keys_v,"-k");
+          vector_push(keys_v,preset->buttons[i].key);
+        }
+      }
+    }
+  }
+
+  if(vector_size(keys_v)>0)
+    vector_prepend(keys_v,(void*)"footswitch");
+  parsed_preset->argc = (int)vector_size(keys_v);
+  parsed_preset->argv = (char**)vector_to_array(keys_v);
+  parsed_preset->argv_s = strdup((char *)str_flatten((const char **)parsed_preset->argv,0,parsed_preset->argc));
+  vector_release(keys_v);
+
+  printf(AC_YELLOW    "\targc:\t" AC_INVERSE "%d" AC_RESETALL "\n",parsed_preset->argc);
+  printf(AC_BLUE      "\targv:\t" AC_INVERSE "%s" AC_RESETALL "\n",parsed_preset->argv_s);
+
+  return(parsed_preset);
+}
 ////////////////////////////////////////////
 static char EXECUTABLE_PATH[PATH_MAX + 1] = { 0 };
 static char *EXECUTABLE;
@@ -95,6 +193,10 @@ TEST t_footswitch_test_write_pedals_xyz(void){
   PASS();
 }
 
+TEST t_parse_footswitch_preset(void){
+  parse_footswitch_preset(PRESET_ONE);
+  PASS();
+}
 TEST t_footswitch_test_write_pedals_abc(void){
   const char *argv[] = {
     "footswitch",
@@ -110,26 +212,10 @@ TEST t_footswitch_test_write_pedals_abc(void){
   PASS();
 }
 
-TEST t_footswitch_test(void *PARAMETER){
-  char *msg         = NULL;
-  int  tested_value = -1;
-
-  tested_value = 1;
-  ASSERT_EQm("Test Value should equal One", tested_value, 1);
-  asprintf(&msg, "Test footswitch-test OK\n\t(%s) @ (%s)\n\tValidated tested_value: %d",
-           EXECUTABLE,
-           EXECUTABLE_PATH_DIRNAME,
-           tested_value
-           );
-  PASSm(msg);
-}
-
 SUITES()
 
 SUITE(s_footswitch_test) {
-  void *TEST_PARAM = 0;
-
-  RUN_TESTp(t_footswitch_test, (void *)TEST_PARAM);
+  RUN_TEST(t_parse_footswitch_preset);
   RUN_TEST(t_footswitch_get_usb_devices_qty);
   RUN_TEST(t_footswitch_test_enumerate_devices);
 }

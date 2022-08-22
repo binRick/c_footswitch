@@ -4,3 +4,5 @@
 submodules/c_deps
 build
 build-muon
+.meson.build*.log
+.meson-build*.log

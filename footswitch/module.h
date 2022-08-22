@@ -6,8 +6,9 @@
 
 module(footswitch_module) {
   define(footswitch_module, CLIB_MODULE);
-  void (*list_usb_devices)(void);
-  int  (*get_usb_devices_qty)(void);
+  void  (*list_usb_devices)(void);
+  int   (*get_usb_devices_qty)(void);
+  pid_t pid;
 };
 
 int  footswitch_module_init(module(footswitch_module) * exports);
@@ -20,4 +21,5 @@ exports(footswitch_module) {
   .deinit              = footswitch_module_deinit,
   .list_usb_devices    = footswitch_enumerate_devs,
   .get_usb_devices_qty = footswitch_usb_devices_qty,
+  .pid                 = 0,
 };

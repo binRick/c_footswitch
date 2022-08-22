@@ -1,4 +1,3 @@
-#pragma once
 ///////////////////////////
 #include <errno.h>
 #include <stdio.h>
@@ -13,7 +12,7 @@
 #include "footswitch/footswitch.h"
 
 static hid_device            *dev                     = NULL;
-static struct pedal_protocol pd                       = { { 0 } };
+static struct pedal_protocol pd                       = { .start = { '\0' }, .pedals = { 0 } };
 static struct pedal_data     *curr_pedal              = &pd.pedals[1]; // start at the second pedal
 static unsigned short        FOOTSWITCH_USB_HIDS[][2] = {
   { 0x1a86, 0xe026 },
@@ -116,10 +115,10 @@ void init() {
     if (retries > 0) {
       printf("retry #%d\n", retries);
     }
-    for (int i = 0; i < sizeof(FOOTSWITCH_USB_HIDS) / sizeof(FOOTSWITCH_USB_HIDS[0]); i++) {
+    for (size_t i = 0; i < sizeof(FOOTSWITCH_USB_HIDS) / sizeof(FOOTSWITCH_USB_HIDS[0]); i++) {
       init_pid(FOOTSWITCH_USB_HIDS[i][0], FOOTSWITCH_USB_HIDS[i][1]);
       if (dev != NULL) {
-        fprintf(stderr, "Loaded Footswitch Device #%d\n", i);
+        fprintf(stderr, "Loaded Footswitch Device #%lu\n", i);
         break;
       }
     }

@@ -13,7 +13,7 @@ footswitch_test_deps = [
   c_stringfn_dep,
   footswitch_dep,
   ansi_codes_dep,
-  #debug_memory_dep,
+  str_flatten_c_dep,
 ]
 footswitch_test_c_args = [
 ]

@@ -15,7 +15,7 @@ footswitch_deps = [
   c_fsio_dep,
   c_stringfn_dep,
   ansi_codes_dep,
-  #debug_memory_dep,
+  str_flatten_c_dep,
 ]
 footswitch_libs = []
 footswitch_c_args = [
