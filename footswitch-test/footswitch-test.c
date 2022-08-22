@@ -1,6 +1,6 @@
 ////////////////////////////////////////////
 #ifdef DEBUG_MEMORY
-#include "debug-memory/debug_memory.h"
+//#include "debug-memory/debug_memory.h"
 #endif
 ////////////////////////////////////////////
 #include "footswitch-test/footswitch-test.h"
@@ -22,31 +22,32 @@ void __attribute__((destructor)) __destructor__footswitch_test();
 void __footswitch_test__setup_executable_path(const char **argv);
 
 ///////////////////////////////////////////////////////////
-#define SUITES()\
-SUITE(s_footswitch_test_main_read) {\
-  RUN_TEST(t_footswitch_test_read_pedals);\
-}\
-SUITE(s_footswitch_test_main_write_abc) {\
-  RUN_TEST(t_footswitch_test_write_pedals_abc);\
-}\
-SUITE(s_footswitch_test_main_write_xyz) {\
-  RUN_TEST(t_footswitch_test_write_pedals_xyz);\
-}\
-SUITE(s_footswitch_test_module) {\
-  RUN_TEST(t_footswitch_test_module);\
-}\
+#define SUITES()                                  \
+  SUITE(s_footswitch_test_main_read) {            \
+    RUN_TEST(t_footswitch_test_read_pedals);      \
+  }                                               \
+  SUITE(s_footswitch_test_main_write_abc) {       \
+    RUN_TEST(t_footswitch_test_write_pedals_abc); \
+  }                                               \
+  SUITE(s_footswitch_test_main_write_xyz) {       \
+    RUN_TEST(t_footswitch_test_write_pedals_xyz); \
+  }                                               \
+  SUITE(s_footswitch_test_module) {               \
+    RUN_TEST(t_footswitch_test_module);           \
+  }                                               \
 ///////////////////////////////////////////////////////////
-#define RUN_SUITES()\
-  RUN_SUITE(s_footswitch_test);\
-  RUN_SUITE(s_footswitch_test_main_read);\
-  RUN_SUITE(s_footswitch_test_main_write_abc);\
-  RUN_SUITE(s_footswitch_test_main_write_xyz);\
-  RUN_SUITE(s_footswitch_test_module);\
+#define RUN_SUITES()                           \
+  RUN_SUITE(s_footswitch_test);                \
+  RUN_SUITE(s_footswitch_test_main_read);      \
+  RUN_SUITE(s_footswitch_test_main_write_abc); \
+  RUN_SUITE(s_footswitch_test_main_write_xyz); \
+  RUN_SUITE(s_footswitch_test_module);         \
 ///////////////////////////////////////////////////////////
 
 TEST t_footswitch_test_module(void){
   int qty = fs->get_usb_devices_qty();
-  ASSERT_GT(qty,0);
+
+  ASSERT_GT(qty, 0);
   fs->list_usb_devices();
   free_fs();
   PASS();
@@ -54,11 +55,14 @@ TEST t_footswitch_test_module(void){
 
 TEST t_footswitch_get_usb_devices_qty(void){
   int qty = footswitch_usb_devices_qty();
-  ASSERT_GT(qty,0);
+
+  ASSERT_GT(qty, 0);
   char *msg;
-  asprintf(&msg,"%d Connected USB Devices",qty);
+
+  asprintf(&msg, "%d Connected USB Devices", qty);
   PASSm(msg);
 }
+
 TEST t_footswitch_test_enumerate_devices(void){
   footswitch_enumerate_devs();
   PASS();
@@ -69,37 +73,43 @@ TEST t_footswitch_test_read_pedals(void){
     "footswitch", "-r",
     NULL,
   };
-  const int argc = 2;
-  int res = footswitch_main(argc,(const char **)argv);
-  ASSERT_EQ(res,0);
+  const int  argc = 2;
+  int        res  = footswitch_main(argc, (const char **)argv);
+
+  ASSERT_EQ(res, 0);
   PASS();
 }
+
 TEST t_footswitch_test_write_pedals_xyz(void){
   const char *argv[] = {
-    "footswitch", 
-    "-1","-kx",
-    "-2","-ky",
-    "-3","-kz",
+    "footswitch",
+    "-1",        "-kx",
+    "-2",        "-ky",
+    "-3",        "-kz",
     NULL,
   };
-  const int argc = 7;
-  int res = footswitch_main(argc,(const char **)argv);
-  ASSERT_EQ(res,0);
+  const int  argc = 7;
+  int        res  = footswitch_main(argc, (const char **)argv);
+
+  ASSERT_EQ(res, 0);
   PASS();
 }
+
 TEST t_footswitch_test_write_pedals_abc(void){
   const char *argv[] = {
-    "footswitch", 
-    "-1","-ka",
-    "-2","-kb",
-    "-3","-kc",
+    "footswitch",
+    "-1",        "-ka",
+    "-2",        "-kb",
+    "-3",        "-kc",
     NULL,
   };
-  const int argc = 7;
-  int res = footswitch_main(argc,(const char **)argv);
-  ASSERT_EQ(res,0);
+  const int  argc = 7;
+  int        res  = footswitch_main(argc, (const char **)argv);
+
+  ASSERT_EQ(res, 0);
   PASS();
 }
+
 TEST t_footswitch_test(void *PARAMETER){
   char *msg         = NULL;
   int  tested_value = -1;
