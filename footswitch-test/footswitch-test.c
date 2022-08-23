@@ -32,34 +32,39 @@ struct footswitch_preset_keys_t {
 };
 struct footswitch_preset_t {
   struct footswitch_preset_keys_t buttons[BUTTON_TYPES_QTY + 1];
+  char                            *skhdrc_file;
+  char                            *skhdrc_cmd;
 };
 
 struct footswitch_preset_t footswitch_presets[] = {
   [PRESET_ONE] =             {
-    .buttons       =               {
+    .skhdrc_file = "/Users/rick/.skhdrc",
+    .skhdrc_cmd  = "echo PRESET_ONE >> /tmp/footswitch.log",
+    .buttons     =           {
       [BUTTON_TYPE_LEFT] =   {
         .modifiers =         {
-          "l_shift",
-          "r_shift",
-          "r_alt",
+          "ctrl",
+          "alt",
         },
-        .key       = "a",
+        .key       = "9",
       },
       [BUTTON_TYPE_CENTER] = {
         .modifiers =         {
-          "l_shift",
-          "r_shift",
-          "r_alt",
+          "l_ctrl",
+          "l_alt",
         },
-        .key       = "b",
+        .key       = "8",
       },
       [BUTTON_TYPE_RIGHT] =  {
         .modifiers =         {
           "l_shift",
           "r_shift",
+          "r_ctrl",
+          "l_ctrl",
           "r_alt",
+          "l_alt",
         },
-        .key       = "c",
+        .key       = "6",
       },
       [BUTTON_TYPES_QTY] =   { 0 },
     },
@@ -101,6 +106,7 @@ struct parsed_footswitch_preset_t {
   char                          *argv_s;
   int                           argc;
   enum footswitch_preset_type_t type;
+  char                          *skhdrc_cmd_s;
 };
 
 struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_preset_type_t preset_type){
@@ -108,7 +114,8 @@ struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_prese
 
   parsed_preset->type = preset_type;
   struct footswitch_preset_t *preset;
-  struct Vector              *keys_v = vector_new();
+  struct Vector              *keys_v       = vector_new();
+  struct Vector              *skhdrc_cmd_v = vector_new();
 
   preset = &(footswitch_presets[preset_type]);
   if (preset != NULL) {
@@ -119,6 +126,8 @@ struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_prese
       if (*(preset->buttons[i]).modifiers) {
         char **m = preset->buttons[i].modifiers;
         while (*m != NULL) {
+          vector_push(skhdrc_cmd_v, (void *)strdup(*m));
+          vector_push(skhdrc_cmd_v, (void *)strdup("+"));
           vector_push(keys_v, (void *)"-m");
           vector_push(keys_v, (void *)strdup(*m));
           m++;
@@ -130,17 +139,44 @@ struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_prese
       }
     }
   }
+///////////////////////////////////////////////////////
+  char skhdrc_key   = '6';
+  char *cmd         = "date >> /tmp/footswitch.log";
+  char *skhdrc_file = "/Users/rick/.skhdrc";
 
+///////////////////////////////////////////////////////
   if (vector_size(keys_v) > 0) {
     vector_prepend(keys_v, (void *)"footswitch");
   }
-  parsed_preset->argc   = (int)vector_size(keys_v);
-  parsed_preset->argv   = (char **)vector_to_array(keys_v);
-  parsed_preset->argv_s = strdup((char *)str_flatten((const char **)parsed_preset->argv, 0, parsed_preset->argc));
+  parsed_preset->argc         = (int)vector_size(keys_v);
+  parsed_preset->argv         = (char **)vector_to_array(keys_v);
+  parsed_preset->argv_s       = strdup((char *)str_flatten((const char **)parsed_preset->argv, 0, parsed_preset->argc));
+  parsed_preset->skhdrc_cmd_s = stringfn_mut_trim(strdup((char *)str_flatten((const char **)vector_to_array(skhdrc_cmd_v), 0, vector_size(skhdrc_cmd_v))));
+  if (stringfn_ends_with(parsed_preset->skhdrc_cmd_s, "+")) {
+    stringfn_mut_substring(parsed_preset->skhdrc_cmd_s, 0, strlen(parsed_preset->skhdrc_cmd_s) - 1);
+  }
+  parsed_preset->skhdrc_cmd_s = stringfn_remove(parsed_preset->skhdrc_cmd_s, "_");
+  struct StringBuffer *sb = stringbuffer_new();
+
+  stringbuffer_append_string(sb, "\n\n##################################\n");
+  stringbuffer_append_string(sb, "###   Footswitch Preset XXXX   ###\n");
+  stringbuffer_append_string(sb, "##################################\n");
+  stringbuffer_append_string(sb, stringfn_mut_trim(parsed_preset->skhdrc_cmd_s));
+  stringbuffer_append_string(sb, " - ");
+  stringbuffer_append(sb, skhdrc_key);
+  stringbuffer_append_string(sb, ":\n  ");
+  stringbuffer_append_string(sb, cmd);
+  stringbuffer_append_string(sb, "\n##################################\n\n");
+  parsed_preset->skhdrc_cmd_s = stringbuffer_to_string(sb);
+  if (fsio_file_exists(skhdrc_file)) {
+    fsio_append_text_file(skhdrc_file, parsed_preset->skhdrc_cmd_s);
+  }
+
   vector_release(keys_v);
 
-  printf(AC_YELLOW    "\targc:\t" AC_INVERSE "%d" AC_RESETALL "\n", parsed_preset->argc);
-  printf(AC_BLUE      "\targv:\t" AC_INVERSE "%s" AC_RESETALL "\n", parsed_preset->argv_s);
+  printf(AC_RED       "\tshkhd:\n" AC_INVERSE "%s" AC_RESETALL "\n", parsed_preset->skhdrc_cmd_s);
+  printf(AC_YELLOW    "\targc :\t" AC_INVERSE "%d" AC_RESETALL "\n", parsed_preset->argc);
+  printf(AC_BLUE      "\targv :\t" AC_INVERSE "%s" AC_RESETALL "\n", parsed_preset->argv_s);
 
   footswitch_main(parsed_preset->argc, (const char **)parsed_preset->argv);
   return(parsed_preset);
