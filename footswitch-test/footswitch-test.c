@@ -16,6 +16,7 @@
 
 enum footswitch_preset_type_t {
   PRESET_ONE,
+  PRESET_TWO,
   PRESETS_QTY,
 };
 enum button_type_t {
@@ -41,7 +42,6 @@ struct footswitch_preset_t footswitch_presets[] = {
           "l_shift",
           "r_shift",
           "r_alt",
-          NULL,
         },
         .key = "a",
       },
@@ -50,7 +50,6 @@ struct footswitch_preset_t footswitch_presets[] = {
           "l_shift",
           "r_shift",
           "r_alt",
-          NULL,
         },
         .key = "b",
       },
@@ -59,9 +58,37 @@ struct footswitch_preset_t footswitch_presets[] = {
           "l_shift",
           "r_shift",
           "r_alt",
-          NULL,
         },
         .key = "c",
+      },
+      [BUTTON_TYPES_QTY] = { 0 },
+    },
+  },
+  [PRESET_TWO] = {
+    .buttons = {
+      [BUTTON_TYPE_LEFT] = {
+        .modifiers = {
+          "r_shift",
+          "l_shift",
+          "l_alt",
+        },
+        .key = "x",
+      },
+      [BUTTON_TYPE_CENTER] = {
+        .modifiers = {
+          "r_shift",
+          "l_shift",
+          "l_alt",
+        },
+        .key = "y",
+      },
+      [BUTTON_TYPE_RIGHT] = {
+        .modifiers = {
+          "r_shift",
+          "l_shift",
+          "l_alt",
+        },
+        .key = "z",
       },
       [BUTTON_TYPES_QTY] = { 0 },
     },
@@ -81,18 +108,22 @@ struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_prese
   parsed_preset->type = preset_type;
   struct footswitch_preset_t *preset;
   struct Vector *keys_v = vector_new();
-  char *b;
   preset = &(footswitch_presets[preset_type]);
   if(preset != NULL){
     for(size_t i=0; i< BUTTON_TYPES_QTY;i++){
+      char *b;
       asprintf(&b,"-%lu",i+1);
       vector_push(keys_v,(void*)strdup(b));
       if(*(preset->buttons[i]).modifiers){
-        vector_push(keys_v,"-m");
-        vector_push(keys_v,*(preset->buttons[i].modifiers));
+        char **m = preset->buttons[i].modifiers;
+        while(*m != NULL){
+          vector_push(keys_v,(void*)"-m");
+          vector_push(keys_v,(void*)strdup(*m));
+          m++;
+        }
         if(*(preset->buttons[i].key)){
-          vector_push(keys_v,"-k");
-          vector_push(keys_v,preset->buttons[i].key);
+          vector_push(keys_v,(void*)"-k");
+          vector_push(keys_v,(void*)strdup(preset->buttons[i].key));
         }
       }
     }
@@ -108,6 +139,7 @@ struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_prese
   printf(AC_YELLOW    "\targc:\t" AC_INVERSE "%d" AC_RESETALL "\n",parsed_preset->argc);
   printf(AC_BLUE      "\targv:\t" AC_INVERSE "%s" AC_RESETALL "\n",parsed_preset->argv_s);
 
+  footswitch_main(parsed_preset->argc,(const char**)parsed_preset->argv);
   return(parsed_preset);
 }
 ////////////////////////////////////////////
@@ -193,8 +225,12 @@ TEST t_footswitch_test_write_pedals_xyz(void){
   PASS();
 }
 
-TEST t_parse_footswitch_preset(void){
+TEST t_parse_footswitch_preset_one(void){
   parse_footswitch_preset(PRESET_ONE);
+  PASS();
+}
+TEST t_parse_footswitch_preset_two(void){
+  parse_footswitch_preset(PRESET_TWO);
   PASS();
 }
 TEST t_footswitch_test_write_pedals_abc(void){
@@ -214,8 +250,15 @@ TEST t_footswitch_test_write_pedals_abc(void){
 
 SUITES()
 
+SUITE(s_footswitch_preset_one) {
+  RUN_TEST(t_parse_footswitch_preset_one);
+  RUN_TEST(t_footswitch_test_read_pedals); 
+}
+SUITE(s_footswitch_preset_two) {
+  RUN_TEST(t_parse_footswitch_preset_two);
+  RUN_TEST(t_footswitch_test_read_pedals); 
+}
 SUITE(s_footswitch_test) {
-  RUN_TEST(t_parse_footswitch_preset);
   RUN_TEST(t_footswitch_get_usb_devices_qty);
   RUN_TEST(t_footswitch_test_enumerate_devices);
 }
@@ -228,6 +271,8 @@ int main(const int argc, char **argv) {
   if (isatty(STDOUT_FILENO)) {
   }
   RUN_SUITES()
+  RUN_SUITE(s_footswitch_preset_one);
+  RUN_SUITE(s_footswitch_preset_two);
   GREATEST_MAIN_END();
 }
 
