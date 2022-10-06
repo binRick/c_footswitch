@@ -9,7 +9,8 @@ footswitch_test_include_dirs = [
 footswitch_test_deps = [
   c_greatest_dep,
   c_vector_dep,
-  c_fsio_dep,
+  roscha_dep,
+  c_fsio_dep,c_stringfn_dep,c_string_buffer_dep,
   c_stringfn_dep,
   footswitch_dep,
   ansi_codes_dep,

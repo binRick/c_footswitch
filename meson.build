@@ -8,6 +8,7 @@ inc = [include_directories(
   'footswitch',
   'footswitch-test',
   'submodules/c_deps',
+  'submodules/c_deps/meson/deps/roscha',
   'submodules/c_deps/submodules',
 )]
 #############################################################################

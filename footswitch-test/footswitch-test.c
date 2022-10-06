@@ -5,14 +5,83 @@
 ////////////////////////////////////////////
 #include "footswitch-test/footswitch-test.h"
 #include "footswitch/footswitch.h"
+//INCBIN(ResticBinary,"restic");
+#include "incbin/incbin.h"
 ////////////////////////////////////////////
 #include "ansi-codes/ansi-codes.h"
 #include "c_fsio/include/fsio.h"
 #include "c_greatest/greatest/greatest.h"
 #include "c_string_buffer/include/stringbuffer.h"
 #include "c_stringfn/include/stringfn.h"
-#include "c_vector/include/vector.h"
+#include "c_vector/vector/vector.h"
+#include "roscha/include/hmap.h"
+#include "roscha/include/object.h"
+#include "roscha/include/parser.h"
+#include "roscha/include/roscha.h"
+#include "roscha/include/sds/sds.h"
+#include "roscha/include/token.h"
+#include "roscha/include/vector.h"
 #include "str-flatten.c/src/str-flatten.h"
+char *skhrc_template = "name={{name}}\n"
+                       "var1={{var1}}\n"
+                       "item.name={{item.name}}, item.age={{item.age}}\n"
+                       "items list=\n"
+                       "{\%for i in items\%}"
+                       " \t#{{loop.index}}> item={{i}}\n"
+                       "{\%endfor\%}\n"
+                       "items obj list=\n"
+                       ""
+                       "{\%for i in item_objects\%}"
+                       " \t#{{loop.index}}> name={{i.name}}\n"
+                       "{\%endfor\%}\n"
+                       "";
+/*
+ * TEST t_roscha(void){
+ * roscha(void);
+ * PASS();
+ * }
+ *
+ * static void test_eval_variable(void){
+ * roscha_init();
+ * struct roscha_env *env = roscha_env_new();
+ * env->vars = roscha_object_new(hmap_new());
+ *
+ * roscha_hmap_set_new(env->vars, "name", "world");
+ * roscha_hmap_set_new(env->vars, "var1", 1);
+ *
+ * struct roscha_object *item = roscha_object_new(hmap_new());
+ * roscha_hmap_set_new(item, "name", "i");
+ * roscha_hmap_set_new(item, "age", 123);
+ * roscha_hmap_set(env->vars, "item", item);
+ *
+ * struct roscha_object *item_objects = roscha_object_new_vector(roscha_vector_new());
+ *
+ * struct roscha_object *i0 = roscha_object_new(hmap_new());
+ * roscha_hmap_set_new(i0, "name", "i0");
+ * roscha_vector_push_object(item_objects, i0);
+ *
+ * struct roscha_object *i1 = roscha_object_new(hmap_new());
+ * roscha_hmap_set_new(i1, "name", "i1");
+ * roscha_vector_push_object(item_objects, i1);
+ *
+ * roscha_hmap_set(env->vars, "item_objects", item_objects);
+ *
+ * struct roscha_object *items = roscha_object_new(roscha_vector_new());
+ * roscha_vector_push_new(items, (slice_whole("item0")));
+ * roscha_vector_push_new(items, (slice_whole("item1")));
+ * roscha_hmap_set(env->vars, "items", items);
+ *
+ * roscha_env_add_template(env, strdup("test"), input);
+ *
+ * sds got = roscha_env_render(env, "test");
+ * printf("==============================\n");
+ * printf("%s", input);
+ * printf("==============================\n");
+ * printf("%s", got);
+ * printf("==============================\n");
+ * roscha_deinit();
+ * }
+ */
 
 enum footswitch_preset_type_t {
   PRESET_ONE,
@@ -25,28 +94,39 @@ enum button_type_t {
   BUTTON_TYPE_RIGHT,
   BUTTON_TYPES_QTY,
 };
-
+struct footswitch_skhdrc_t {
+  char *keys;
+  char *cmd;
+  char *text;
+  char *name;
+  char *sha256sum;
+  bool enabled;
+};
 struct footswitch_preset_keys_t {
-  char *key;
-  char *modifiers[8];
+  char                       *key;
+  char                       *modifiers[8];
+  struct footswitch_skhdrc_t skhd;
 };
 struct footswitch_preset_t {
   struct footswitch_preset_keys_t buttons[BUTTON_TYPES_QTY + 1];
   char                            *skhdrc_file;
-  char                            *skhdrc_cmd;
 };
 
 struct footswitch_preset_t footswitch_presets[] = {
   [PRESET_ONE] =             {
     .skhdrc_file = "/Users/rick/.skhdrc",
-    .skhdrc_cmd  = "echo PRESET_ONE >> /tmp/footswitch.log",
     .buttons     =           {
       [BUTTON_TYPE_LEFT] =   {
         .modifiers =         {
           "ctrl",
           "alt",
         },
-        .key       = "9",
+        .key  = "9",
+        .skhd =         {
+          .name    = "TEST PRESET ONE",
+          .enabled = true,
+          .cmd     = "echo PRESET_ONE >> /tmp/footswitch.log",
+        },
       },
       [BUTTON_TYPE_CENTER] = {
         .modifiers =         {
@@ -164,21 +244,24 @@ struct parsed_footswitch_preset_t *parse_footswitch_preset(enum footswitch_prese
   stringbuffer_append_string(sb, stringfn_mut_trim(parsed_preset->skhdrc_cmd_s));
   stringbuffer_append_string(sb, " - ");
   stringbuffer_append(sb, skhdrc_key);
-  stringbuffer_append_string(sb, ":\n  ");
+  stringbuffer_append_string(sb, ": ");
   stringbuffer_append_string(sb, cmd);
   stringbuffer_append_string(sb, "\n##################################\n\n");
   parsed_preset->skhdrc_cmd_s = stringbuffer_to_string(sb);
-  if (fsio_file_exists(skhdrc_file)) {
-    fsio_append_text_file(skhdrc_file, parsed_preset->skhdrc_cmd_s);
-  }
-
   vector_release(keys_v);
+  stringbuffer_release(sb);
 
-  printf(AC_RED       "\tshkhd:\n" AC_INVERSE "%s" AC_RESETALL "\n", parsed_preset->skhdrc_cmd_s);
   printf(AC_YELLOW    "\targc :\t" AC_INVERSE "%d" AC_RESETALL "\n", parsed_preset->argc);
   printf(AC_BLUE      "\targv :\t" AC_INVERSE "%s" AC_RESETALL "\n", parsed_preset->argv_s);
 
-  footswitch_main(parsed_preset->argc, (const char **)parsed_preset->argv);
+  int res = footswitch_main(parsed_preset->argc, (const char **)parsed_preset->argv);
+
+  if (res == 0) {
+    if (fsio_file_exists(skhdrc_file)) {
+      printf(AC_RED       "\tshkhd:\n" AC_INVERSE "%s" AC_RESETALL "\n", parsed_preset->skhdrc_cmd_s);
+      fsio_append_text_file(skhdrc_file, parsed_preset->skhdrc_cmd_s);
+    }
+  }
   return(parsed_preset);
 } /* parse_footswitch_preset */
 ////////////////////////////////////////////
@@ -290,7 +373,11 @@ TEST t_footswitch_test_write_pedals_abc(void){
 }
 
 SUITES()
-
+/*
+ * SUITE(s_roscha) {
+ * RUN_TEST(t_roscha);
+ * }
+ */
 SUITE(s_footswitch_preset_one) {
   RUN_TEST(t_parse_footswitch_preset_one);
   RUN_TEST(t_footswitch_test_read_pedals);
@@ -314,6 +401,7 @@ int main(const int argc, char **argv) {
   RUN_SUITES()
   RUN_SUITE(s_footswitch_preset_one);
   RUN_SUITE(s_footswitch_preset_two);
+//  RUN_SUITE(s_roscha);
   GREATEST_MAIN_END();
 }
 
